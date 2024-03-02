@@ -12,8 +12,6 @@ const LoginPage = ({ setUsername }) => {
     const navigate = useNavigate();
     const [modalOpen, setModalOpen] = useState(false);
     const [playername, setPlayername] = useState("");
-    const username = useSelector(state => state.user.username);
-console.log(username);
     const handlePlayernameChange = (e) => {
         setPlayername(e.target.value);
     };
@@ -27,14 +25,14 @@ console.log(username);
                 },
                 body: JSON.stringify({ player: playername }),
             });
-
+    
             const data = await response.json();
-
+    
             if (response.ok) {
                 toast.success(data.message);
+                localStorage.setItem('username', playername);
                 setPlayername("");
                 navigate('/game');
-                // Dispatch action to update username in Redux store
                 setUsername(playername);
             } else {
                 toast.error(`Error: ${data.error}`);
@@ -43,6 +41,7 @@ console.log(username);
             toast.error("An error occurred while communicating with the server.");
         }
     };
+    
 
     return (
         <div className='login'>

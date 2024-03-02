@@ -1,7 +1,6 @@
 import React, { Children } from "react";
 import "./Modal.css";
 import Button from "../../Atoms/Button/Button";
-import Input from "../../Atoms/Input/Input";
 import PropTypes from "prop-types";
 
 

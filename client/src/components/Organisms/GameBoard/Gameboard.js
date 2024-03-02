@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux'; 
+import { useDispatch, useSelector } from "react-redux";
 import { clearUsername } from '../../../actions/userActions';
 import { useNavigate } from 'react-router-dom';
 import './Gameboard.css';
@@ -7,31 +7,77 @@ import CardDisplay from '../../Molecules/CardDisplay/CardDisplay';
 import { toast } from 'react-toastify';
 import Button from '../../Atoms/Button/Button';
 
-const Gameboard = ({ playerId }) => {
+const Gameboard = () => {
     const [undrawnCards, setUndrawnCards] = useState([]);
-    const [drawnCards, setDrawnCards] = useState([]);
+    const [removedCards, setRemovedCards] = useState([]);
+    const [userCards, setUserCards] = useState([]);
     const [flippedCards, setFlippedCards] = useState([]);
     const [winCount, setWinCount] = useState(0);
     const [loseCount, setLoseCount] = useState(0);
-    const dispatch = useDispatch(); 
-    const navigate = useNavigate(); 
+    const [apiFetched, setApiFetched] = useState(false);
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const username = localStorage.getItem('username');
+    const userStats = useSelector(state => state.leaderboard.userStats);
+    
+    useEffect(() => {
+    const updatePlayerStatsAndGameLogic = async () => {
+        if ((apiFetched && undrawnCards.length === 0 )) {
+            try {
+                const userId = userStats.find(user => user.player === username)?.id;
+                const url = `http://localhost:8080/updatePlayerStats/${userId}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        win:winCount,
+                        loss:loseCount
+                    })
+                });
 
+                if (response.ok) {
+                    toast.success('Player stats updated successfully.');
+                } else {
+                    toast.error('Failed to update player stats:', response.statusText);
+                }
+            } catch (error) {
+                toast.error('An error occurred while updating player stats:', error.message);
+            }
+
+            setWinCount((prevWinCount) => prevWinCount + 1);
+            toast.success('Congratulations! You won the game!');
+            setUserCards([]);
+            setRemovedCards([]);
+            fetchRandomCards();
+        }
+    };
+
+    updatePlayerStatsAndGameLogic();
+}, [apiFetched, undrawnCards, winCount, loseCount, userStats, username]);
+
+
+    
     const fetchRandomCards = async () => {
         try {
             const response = await fetch('http://localhost:8080/get-random-cards');
             const data = await response.json();
             if (response.ok) {
                 setUndrawnCards(data.cards);
+                setApiFetched(true);
             } else {
-                console.error(`Error: ${data.error}`);
+                toast.error(`Error: ${data.error}`);
             }
+
         } catch (error) {
-            console.error('An error occurred while fetching random cards.');
+            toast.error('An error occurred while fetching random cards.');
         }
+        setWinCount(0);
+        setLoseCount(0);
     };
 
     useEffect(() => {
-        // Fetch random cards from the server
         fetchRandomCards();
     }, []);
 
@@ -50,121 +96,124 @@ const Gameboard = ({ playerId }) => {
         }
     };
 
-    const updatePlayerStats = async (win, loss) => {
-        try {
-            const response = await fetch(`http://localhost:8080/updatePlayerStats/${playerId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ win, loss }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                console.log('Player stats updated successfully:', data);
-            } else {
-                console.error(`Error updating player stats: ${data.error}`);
-            }
-        } catch (error) {
-            console.error('An error occurred while updating player stats:', error);
+    const handleCardClick = async (index) => {
+        const card = undrawnCards[index];
+    
+        switch (card) {
+            case 'cat':
+                const newRemovedCards = [...removedCards, card];
+                setRemovedCards(newRemovedCards);
+                setUndrawnCards((prevUndrawnCards) =>
+                    prevUndrawnCards.filter((_, idx) => idx !== index)
+                );
+                toast.info("It's a Cat Card 😼 , Added to removed Cards");
+                break;
+            case 'defuse':
+                const newUserCards = [...userCards, card];
+                setUserCards(newUserCards);
+                setUndrawnCards((prevUndrawnCards) =>
+                    prevUndrawnCards.filter((_, idx) => idx !== index)
+                );
+                toast.info("It's a Defuse Card 🙅‍♂️ , Added to User Cards");
+                break;
+            case 'shuffle':
+                setUserCards([]);
+                setRemovedCards([]);
+                toast.info("It's a Shuffle card 🔀 . The game is restarting again!");
+                fetchRandomCards();
+                break;
+            case 'exploding':
+                if (userCards.includes('defuse')) {
+                    const defuseIndex = userCards.indexOf('defuse');
+                    const updatedDrawnCards = [...userCards];
+                    updatedDrawnCards.splice(defuseIndex, 1);
+                    setUserCards(updatedDrawnCards);
+                    setUndrawnCards((prevUndrawnCards) =>
+                        prevUndrawnCards.filter((_, idx) => idx !== index)
+                    );
+                    toast.info("Phew! You had a Defuse Card. Bomb defused successfully");
+                } else {
+                    setLoseCount((prevLoseCount) => prevLoseCount + 1);
+                    toast.info('Boom 💣 ! It\'s an exploding card. You\'ve lost the game!');
+                    
+                    // Update player stats
+                    try {
+                        const userId = userStats.find(user => user.player === username)?.id;
+                        const url = `http://localhost:8080/updatePlayerStats/${userId}`;
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                win: winCount,
+                                loss: loseCount + 1 // Incrementing lose count
+                            })
+                        });
+    
+                        if (response.ok) {
+                            // Successfully updated player stats
+                            toast.success('Player stats updated successfully.');
+                        } else {
+                            // Handle error
+                            toast.error('Failed to update player stats:', response.statusText);
+                        }
+                    } catch (error) {
+                        toast.error('An error occurred while updating player stats:', error.message);
+                    }
+    
+                    setUserCards([]);
+                    setRemovedCards([]);
+                    fetchRandomCards();
+                }
+                break;
+            default:
+                break;
         }
     };
+    
+    
 
-    const handleCardClick = async (index) => {
-      // Toggle flipped state of the card at the given index
-      setFlippedCards((prevFlippedCards) => {
-          const newFlippedCards = [...prevFlippedCards];
-          newFlippedCards[index] = !newFlippedCards[index];
-          return newFlippedCards;
-      });
-  
-      const card = undrawnCards[index];
-      switch (card) {
-          case 'cat':
-          case 'defuse':
-              setDrawnCards((prevDrawnCards) => [...prevDrawnCards, card]);
-              // Remove the drawn card from the undrawnCards array
-              setUndrawnCards((prevUndrawnCards) =>
-                  prevUndrawnCards.filter((_, idx) => idx !== index)
-              );
-              break;
-  
-          case 'shuffle':
-              setDrawnCards([]);
-              fetchRandomCards();
-              break;
-  
-          case 'exploding':
-              if (drawnCards.includes('defuse')) {
-                  const defuseIndex = drawnCards.indexOf('defuse');
-                  // Remove one defusing card from the drawnCards array
-                  setDrawnCards((prevDrawnCards) => {
-                      const updatedDrawnCards = [...prevDrawnCards];
-                      updatedDrawnCards.splice(defuseIndex, 1);
-                      return updatedDrawnCards;
-                  });
-                  // Remove the exploding card from the undrawnCards array
-                  setUndrawnCards((prevUndrawnCards) =>
-                      prevUndrawnCards.filter((_, idx) => idx !== index)
-                  );
-              } else {
-                  // Player does not have a defusing card, update loss count
-                  setLoseCount((prevLoseCount) => prevLoseCount + 1);
-                  // Display toast indicating game over
-                  alert('You lost the game!');
-                  // Reset drawn and undrawn cards
-                  setDrawnCards([]);
-                  fetchRandomCards();
-              }
-              break;
-  
-          default:
-              break;
-      }
-  
-      // Check if the game is won (undrawn cards are empty)
-      if (undrawnCards.length === 0) {
-          // Update win count
-          setWinCount((prevWinCount) => prevWinCount + 1);
-          // Display toast indicating game won
-          alert('You won the game!');
-          // Reset drawn and undrawn cards
-          setDrawnCards([]);
-          fetchRandomCards();
-      }
-  
-  };
-  console.log(winCount)
-  console.log(loseCount)
-  updatePlayerStats(winCount,loseCount);
-  
     const handleLogout = () => {
-        dispatch(clearUsername()); 
-        navigate('/'); 
+        dispatch(clearUsername());
+        navigate('/');
     };
 
     return (
         <div className='gameboard'>
-            <Button onClick={handleLogout}>Logout</Button> 
-            <div>
-                <h2>Drawn Cards:</h2>
-                <ul style={{ display: 'flex' }}>
-                    {drawnCards.map((card, index) => (
+            <div className='user-and-removed'>
+            <div className='display-cards-user'>
+                <h2 className='cards-head'>User Cards</h2>
+                <ul className='display-cards'>
+                    {userCards.map((card, index) => (
                         <CardDisplay
                             key={index}
                             type={card}
                             emoji={getEmoji(card)}
-                            flipped={flippedCards[index]}
-                            onClick={() => handleCardClick(index)}
+                            flipped={true}
                         ></CardDisplay>
                     ))}
+                    
                 </ul>
             </div>
-            <div>
-                <h2>Undrawn Cards:</h2>
-                <ul style={{ display: 'flex' }}>
+            <div className='display-cards-removed'>
+                <h2 className='cards-head'>Removed Cards</h2>
+                <ul className='display-cards'>
+                    {removedCards.map((card, index) => (
+                        <CardDisplay
+                            key={index}
+                            type={card}
+                            emoji={getEmoji(card)}
+                            flipped={true}
+                        ></CardDisplay>
+                    ))}
+                    
+                </ul>
+            </div>
+            </div>
+            <div className='display-cards-continer'>
+                <h2 className='cards-head'>Undrawn Cards</h2>
+                <ul className='display-cards'>
                     {undrawnCards.map((card, index) => (
                         <CardDisplay
                             key={index}
@@ -176,9 +225,8 @@ const Gameboard = ({ playerId }) => {
                     ))}
                 </ul>
             </div>
-            <div>
-                <h2>Win Count: {winCount}</h2>
-                <h2>Lose Count: {loseCount}</h2>
+            <div className='logout-wrapper' >
+                <Button className='logout' onClick={handleLogout}>Play With New User</Button>
             </div>
         </div>
     );

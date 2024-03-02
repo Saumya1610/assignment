@@ -6,13 +6,16 @@ import Card from "../../Atoms/Card/Card";
 const CardDisplay = ({ type, emoji, flipped, children, onClick }) => {
   return (
     <Card onClick={onClick} className={`card-display ${type}-card ${flipped ? 'flipped' : ''}`}>
+      {flipped ? (
         <div className="front">
           <span>{emoji}</span>
           <h1>{`${type} Card`} </h1>
           <span>{emoji}</span>
           {children}
         </div>
-      
+      ) : (
+        <div className="back"></div>
+      )}
     </Card>
   );
 };

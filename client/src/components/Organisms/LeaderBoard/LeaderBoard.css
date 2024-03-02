@@ -1,14 +1,14 @@
-.leaderboard{
+.leaderboard {
     background-color: rgba(0, 0, 0, 0.7);
     height: 95%;
-margin: auto auto;
-border-radius: 1rem;
-color: white;
-padding: 1rem;
-text-align: center;
+    margin: auto auto;
+    border-radius: 1rem;
+    color: white;
+    padding: 1rem;
+    text-align: center;
 }
 
-.leaderboard-table{
+.leaderboard-table {
     width: 100%;
     text-transform: capitalize;
 }
