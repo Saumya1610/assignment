@@ -15,3 +15,24 @@
 .leaderboard{
     width: 22.5%;
 }
+
+
+@media (max-width: 1300px) {
+    .gameboard{
+        height: 70%;  
+    }
+    .leaderboard{
+        width: 20%;
+    }
+}
+
+@media (max-width: 500px) {
+    .home{
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .leaderboard{
+        width: 90%;
+    }
+}

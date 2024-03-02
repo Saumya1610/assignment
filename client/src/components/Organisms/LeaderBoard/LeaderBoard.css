@@ -12,3 +12,10 @@
     width: 100%;
     text-transform: capitalize;
 }
+
+@media (max-width: 1300px) {
+    .leaderboard{
+        height: 90%;
+        
+    }
+}

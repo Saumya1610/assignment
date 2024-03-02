@@ -49,6 +49,7 @@
     
 }
 .logout-wrapper{
+    width: 90%;
     text-align: center;
 }
 .logout{
@@ -60,3 +61,39 @@
     font-size: 1.5rem;
     border: 2px solid white;
 }
+
+
+@media (max-width: 1300px) {
+    .cards-head {
+        padding: 0.75rem;
+        border: 2px solid white;
+        font-size: 1rem;
+        margin-bottom: 0.75rem;  
+    }
+  }
+
+  @media (max-width: 500px) {
+    .logout-wrapper{
+        width: 90%;
+    }
+  .logout{
+    font-size: 0.75rem;
+  }
+    .display-cards{
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    .user-and-removed{
+    flex-direction: column;
+    }
+    .display-cards-user{
+        width: 90%;
+    }
+    .display-cards-removed{
+        width: 90%;
+    }
+    .display-cards-continer{
+        margin-top: 1rem;
+    }
+
+  }
